@@ -4,33 +4,37 @@
 import sys
 from types import FunctionType
 from urllib.parse import urlsplit, unquote
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 DEFAULT_PORT = 8000
 DEFAULT_ADDRESS = "0.0.0.0"
 
 
-class MyHandler(BaseHTTPRequestHandler):
+class MyHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         params = dict()
         raddr, rport = self.client_address
         print(f"[+] receive GET request from : {raddr}:{rport}")
         print(f"[+] <- {self.requestline}")
-        get_params = urlsplit(self.requestline).query.split(" ")[0].split("&")
+        get_params = urlsplit(self.requestline).query.split(" ")[0]
+        
+        if get_params:
+            for p in get_params.split("&"):
+                k, v = p.split("=")
+                params[k] = unquote(v)
 
-        for p in get_params:
-            k, v = p.split("=")
-            params[k] = unquote(v)
-
-        try:
-            custom_process_params(params)
-        except:
-            pass
+            try:
+                custom_process_params(params)
+            except:
+                pass
+            else:
+                print("[+] -> 200")
+                self.send_response_only(200)
+            finally:
+                self.end_headers()
         else:
-            print("[+] -> 200")
-            self.send_response_only(200)
-        finally:
-            self.end_headers()
+            # use default behavior like 'python3 -m http.server <port>'
+            super().do_GET()
 
 
 def run(port: int):
@@ -40,13 +44,13 @@ def run(port: int):
 
 
 def custom_process_params(params: dict):
-    # TO DO change
+    # TO DO change for custom process
 
 
 def main():
     port = None
     if len(sys.argv) > 1:
-        port = sys.argv[1]
+        port = int(sys.argv[1])
 
     port = port or DEFAULT_PORT
     run(port)
